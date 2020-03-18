@@ -44,15 +44,6 @@ For example, `http://host/nad/Main.Volume` with body `=-40` will set the volume 
 
 Internally, the command from the URL and the body are simply concatenated before sending it to the receiver over RS232.
 
-Yes, it would be cleaner to have a simple JSON structure like
-```JSON
-{
-    "op" : "=",
-    "arg" : "-40"
-}
-```
-but the above also works...
-
 Again, the return value is a verbatim copy of the output from the receiver.
 
 ### POST (NON-REST)
