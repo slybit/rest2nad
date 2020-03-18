@@ -1,0 +1,11 @@
+[Unit]
+Description=REST2NAD Service
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python /home/volumio/nad.py /home/volumio/config.yaml
+
+[Install]
+WantedBy=multi-user.target
