@@ -1,7 +1,7 @@
 # REST2NAD
 
 A tiny Python based REST server to control your NAD Receiver (or other equipment) through its RS232 port.
-I guess this is only useful for older models (like mine) that do not yet have a built-in ethernet port. But I guarantee you that bying a Raspberry Pi to run this will be much cheaper than getting a new receiver :-)
+I guess this is only useful for older models (like mine) that do not yet have a built-in ethernet port. But I guarantee you that buying a Raspberry Pi to run this will be much cheaper than getting a new receiver :-)
 
 I run this on my Raspberry Pi based music streamer that sits next to the receiver.
 
