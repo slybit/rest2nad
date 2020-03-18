@@ -29,12 +29,12 @@ except:
 # SERIAL
 # ----------------------------------------------------------------------------------------------------------------------------------------
 
-#try:
-#    nad_serial = serial.Serial(port=config['serial']['port'], baudrate=115200, xonxoff=False, rtscts=False, dsrdtr=False, timeout=0.5)
-#    logging.info("[SERIAL] Connected to " +  config['serial']['port'])
-#except:
-#    logging.critical( "[SERIAL] Could not open " + config['serial']['port'])
-#    sys.exit(1)
+try:
+    nad_serial = serial.Serial(port=config['serial']['port'], baudrate=115200, xonxoff=False, rtscts=False, dsrdtr=False, timeout=0.5)
+    logging.info("[SERIAL] Connected to " +  config['serial']['port'])
+except:
+    logging.critical( "[SERIAL] Could not open " + config['serial']['port'])
+    sys.exit(1)
 
 
 # ----------------------------------------------------------------------------------------------------------------------------------------
