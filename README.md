@@ -58,3 +58,25 @@ For example, `http://host/nad/` with body `Main.Power=On` will turn on the recei
 Internally, the command is taken verbatim from the body and sent to the receiver over RS232.
 
 Again, the return value is a verbatim copy of the output from the receiver.
+
+## Using the nad.service
+
+Adapt the `nad.service` to your needs. Likely the only thing you would want to change is the location of the nad.py script and the config.yaml file:
+
+```
+ExecStart=/usr/bin/python /home/volumio/nad.py /home/volumio/config.yaml
+```
+
+### Install the service file
+
+```bash
+sudo cp nad.service /etc/systemd/system/nad.service
+sudo chmod 644 /etc/systemd/system/nad.service
+```
+
+### Use it
+```bash
+sudo systemctl enable myservice
+sudo systemctl start myservice
+sudo systemctl status myservice
+```
