@@ -3,13 +3,50 @@ import logging
 import sys
 import serial
 from flask import Flask, request
+import serial.threaded
+from queue import Queue
 
+# PySerial protocol class tailored to the NAD serial protocol
+class NADProtocol(serial.threaded.Protocol):
+    def __init__(self):
+        self.buffer = bytearray()
+        self.TERMINATOR = b'\r'
+
+    def __call__(self):
+        return self
+
+    def data_received(self, data):
+        self.buffer.extend(data)
+        while self.TERMINATOR in self.buffer:
+            packet, self.buffer = self.buffer.split(self.TERMINATOR, 1)
+            self.handle_packet(packet)
+
+    def handle_packet(self, packet):
+        text = packet.decode('utf-8', 'replace')
+        sys.stdout.write('line received: {}\n'.format(text))
+        # we use the queue for just one item, so clear it first
+        empty_queue()
+        QUEUE.put(text)
+
+
+
+# INIT LOGGING
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# SHARED QUEUE
+QUEUE = Queue()
+
+def empty_queue():
+    while not QUEUE.empty():
+        try:
+            QUEUE.get(False)
+        except Empty:
+            continue
+        QUEUE.task_done()
 
 # ----------------------------------------------------------------------------------------------------------------------------------------
 # CONFIG
 # ----------------------------------------------------------------------------------------------------------------------------------------
-
 
 if len(sys.argv) < 2:
     logging.critical("No config file provided.")
@@ -32,6 +69,9 @@ except:
 try:
     nad_serial = serial.Serial(port=config['serial']['port'], baudrate=115200, xonxoff=False, rtscts=False, dsrdtr=False, timeout=0.5)
     logging.info("[SERIAL] Connected to " +  config['serial']['port'])
+    nad_protocol = NADProtocol()
+    serial_worker = serial.threaded.ReaderThread(nad_serial, nad_protocol)
+    serial_worker.start()
 except:
     logging.critical( "[SERIAL] Could not open " + config['serial']['port'])
     sys.exit(1)
@@ -52,9 +92,14 @@ def getCommand(command):
     command = command.encode('utf-8','ignore')
     logging.info("[SERIAL] Sending command " + command)
     try:
+        # empty the queue first (it will normally contain a single old item)
+        empty_queue()
         nad_serial.write('\n' + command + '\n')
-        res = nad_serial.read_until()
-        return res
+        # retrieve data (blocking)
+        data = QUEUE.get()
+        # indicate data has been consumed
+        QUEUE.task_done()
+        return data
     except serial.SerialTimeoutException:
         return "RS232 Time out"
     except:
@@ -66,9 +111,14 @@ def postCommand():
     command = command.encode('utf-8','ignore')
     logging.info("[SERIAL] Sending command " + command)
     try:
+        # empty the queue first (it will normally contain a single old item)
+        empty_queue()
         nad_serial.write('\n' + command + '\n')
-        res = nad_serial.read_until()
-        return res
+        # retrieve data (blocking)
+        data = QUEUE.get()
+        # indicate data has been consumed
+        QUEUE.task_done()
+        return data
     except serial.SerialTimeoutException:
         return "RS232 Time out"
     except:
