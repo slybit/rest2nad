@@ -5,7 +5,7 @@ import serial
 import serial.threaded
 from flask import Flask, request
 import paho.mqtt.client as mqtt
-from queue import Queue
+from Queue import Queue
 
 # PySerial protocol class tailored to the NAD serial protocol
 class NADProtocol(serial.threaded.Protocol):
@@ -30,7 +30,9 @@ class NADProtocol(serial.threaded.Protocol):
         QUEUE.put(text)
         # publish on the MQTT
         try:
-            client.publish("nad/status/msg", text)
+            command = text.split('=')[0]
+            value = text.split('=')[1]
+            client.publish("nad/status/" + str(command), str(value))
         except:
             logging.error("Could not publish MQTT message")
 
@@ -77,13 +79,24 @@ def mqtt_on_connect(client, userdata, flags, rc):
 
 def mqtt_on_message(client, userdata, msg):
     global nad_serial
-    logging.debug("[MQTT] Message on '" + str(msg.topic) + "': " + str(msg.payload))
+    logging.debug("[MQTT] Message on '" + msg.topic + "': " + str(msg.payload))
+    command = msg.topic.split('/')[len(msg.topic.split('/')) - 1]
+    if msg.topic.startswith("nad/get") or msg.topic.startswith("nad/read"):
+        command = command + '?'
+    elif msg.topic.startswith("nad/set") or msg.topic.startswith("nad/write"):
+        command = command + str(msg.payload)
+    else:
+        logging.debug("Not a valid nad command msg")
+        return
+
     try:
-        nad_serial.write('\n' + str(msg.payload) + '\n')
+        logging.debug("sending to serial: " + command)
+        nad_serial.write(str(command) + '\r')
     except serial.SerialTimeoutException:
         return "RS232 Time out"
     except:
         return "RS232 Unknown error"
+    
 
 try:
     client = mqtt.Client()
@@ -102,8 +115,8 @@ except:
 # ----------------------------------------------------------------------------------------------------------------------------------------
 
 try:
-    #nad_serial = serial.Serial(port=config['serial']['port'], baudrate=115200, xonxoff=False, rtscts=False, dsrdtr=False, timeout=0.5)
-    nad_serial = serial.serial_for_url('loop://', baudrate=115200, timeout=1)
+    nad_serial = serial.Serial(port=config['serial']['port'], baudrate=115200, xonxoff=False, rtscts=False, dsrdtr=False, timeout=0.5)
+    #nad_serial = serial.serial_for_url('loop://', baudrate=115200, timeout=1)
     logging.info("[SERIAL] Connected to " +  config['serial']['port'])
     nad_protocol = NADProtocol()
     serial_worker = serial.threaded.ReaderThread(nad_serial, nad_protocol)
