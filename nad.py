@@ -96,7 +96,7 @@ def mqtt_on_message(client, userdata, msg):
         return "RS232 Time out"
     except:
         return "RS232 Unknown error"
-    
+
 
 try:
     client = mqtt.Client()
@@ -143,7 +143,7 @@ def getCommand(command):
     try:
         # empty the queue first (it will normally contain a single old item)
         empty_queue()
-        nad_serial.write('\n' + command + '\n')
+        nad_serial.write(command + '\r')
         # retrieve data (blocking)
         data = QUEUE.get()
         # indicate data has been consumed
@@ -162,7 +162,7 @@ def postCommand():
     try:
         # empty the queue first (it will normally contain a single old item)
         empty_queue()
-        nad_serial.write('\n' + command + '\n')
+        nad_serial.write(command + '\r')
         # retrieve data (blocking)
         data = QUEUE.get()
         # indicate data has been consumed
