@@ -1,4 +1,5 @@
 Flask
 pyserial
 PyYAML
+paho-mqtt
 

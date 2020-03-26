@@ -2,8 +2,9 @@ import yaml
 import logging
 import sys
 import serial
-from flask import Flask, request
 import serial.threaded
+from flask import Flask, request
+import paho.mqtt.client as mqtt
 from queue import Queue
 
 # PySerial protocol class tailored to the NAD serial protocol
@@ -27,6 +28,11 @@ class NADProtocol(serial.threaded.Protocol):
         # we use the queue for just one item, so clear it first
         empty_queue()
         QUEUE.put(text)
+        # publish on the MQTT
+        try:
+            client.publish("nad/status/msg", text)
+        except:
+            logging.error("Could not publish MQTT message")
 
 
 
@@ -51,7 +57,7 @@ def empty_queue():
 if len(sys.argv) < 2:
     logging.critical("No config file provided.")
     sys.exit(1)
-    
+
 config_file = sys.argv[1]
 
 try:
@@ -59,15 +65,45 @@ try:
         config = yaml.load(file, Loader=yaml.FullLoader)
 except:
     logging.critical("[CONFIG] Could not open file config.yaml")
-    sys.exit(1) 
-  
+    sys.exit(1)
+
+# ----------------------------------------------------------------------------------------------------------------------------------------
+# MQTT
+# ----------------------------------------------------------------------------------------------------------------------------------------
+
+def mqtt_on_connect(client, userdata, flags, rc):
+    logging.info("[MQTT] Connected to broker (result code " + str(rc) + ")")
+    client.subscribe("nad/#")
+
+def mqtt_on_message(client, userdata, msg):
+    global nad_serial
+    logging.debug("[MQTT] Message on '" + str(msg.topic) + "': " + str(msg.payload))
+    try:
+        nad_serial.write('\n' + str(msg.payload) + '\n')
+    except serial.SerialTimeoutException:
+        return "RS232 Time out"
+    except:
+        return "RS232 Unknown error"
+
+try:
+    client = mqtt.Client()
+    client.on_connect = mqtt_on_connect
+    client.on_message = mqtt_on_message
+    client.connect(config["mqtt"]["host"], config["mqtt"]["port"], 60)
+    client.loop_start()
+except:
+    logging.critical("Could not setup mqtt session. Bye")
+    sys.exit(1)
+
+
 
 # ----------------------------------------------------------------------------------------------------------------------------------------
 # SERIAL
 # ----------------------------------------------------------------------------------------------------------------------------------------
 
 try:
-    nad_serial = serial.Serial(port=config['serial']['port'], baudrate=115200, xonxoff=False, rtscts=False, dsrdtr=False, timeout=0.5)
+    #nad_serial = serial.Serial(port=config['serial']['port'], baudrate=115200, xonxoff=False, rtscts=False, dsrdtr=False, timeout=0.5)
+    nad_serial = serial.serial_for_url('loop://', baudrate=115200, timeout=1)
     logging.info("[SERIAL] Connected to " +  config['serial']['port'])
     nad_protocol = NADProtocol()
     serial_worker = serial.threaded.ReaderThread(nad_serial, nad_protocol)
