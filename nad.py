@@ -5,7 +5,7 @@ import serial
 import serial.threaded
 from flask import Flask, request
 import paho.mqtt.client as mqtt
-from Queue import Queue
+from Queue import Queue, Empty
 
 # PySerial protocol class tailored to the NAD serial protocol
 class NADProtocol(serial.threaded.Protocol):
@@ -145,12 +145,14 @@ def getCommand(command):
         empty_queue()
         nad_serial.write(command + '\r')
         # retrieve data (blocking)
-        data = QUEUE.get()
+        data = QUEUE.get(True, 1)
         # indicate data has been consumed
         QUEUE.task_done()
         return data
     except serial.SerialTimeoutException:
         return "RS232 Time out"
+    except Empty:
+        return "No response from NAD"
     except:
         return "RS232 Unknown error"
 
@@ -164,12 +166,14 @@ def postCommand():
         empty_queue()
         nad_serial.write(command + '\r')
         # retrieve data (blocking)
-        data = QUEUE.get()
+        data = QUEUE.get(True, 1)
         # indicate data has been consumed
         QUEUE.task_done()
         return data
     except serial.SerialTimeoutException:
         return "RS232 Time out"
+    except Empty:
+        return "No response from NAD"
     except:
         return "RS232 Unknown error"
 
